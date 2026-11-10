@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Penilaian KPI Karyawan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+
+            header,
+            nav,
+            button,
+            .no-print {
+                display: none !important;
+            }
+
+            section {
+                display: block !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            #tab-rekap {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans antialiased pb-20 transition-colors duration-200">
+
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-700 dark:bg-slate-800 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="bg-white text-indigo-700 dark:bg-slate-700 dark:text-indigo-400 p-2 rounded-lg font-bold text-xl shadow">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Sistem KPI Karyawan</h1>
+                    <p class="text-xs text-indigo-200 dark:text-slate-400">Evaluasi Harian & Rekapitulasi Bulanan
+                        Otomatis</p>
+                </div>
+            </div>
+            <!-- Backup, Restore, Theme, Reset Buttons -->
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="toggleDarkMode()"
+                    class="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-500 dark:hover:bg-slate-600 text-xs px-3 py-2 rounded font-medium border border-indigo-400 dark:border-slate-600 transition flex items-center gap-1"
+                    title="Ganti Tema">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+                <button onclick="exportData()"
+                    class="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-500 dark:hover:bg-slate-600 text-xs px-3 py-2 rounded font-medium border border-indigo-400 dark:border-slate-600 transition flex items-center gap-1">
+                    <i class="fa-solid fa-download"></i> Backup
+                </button>
+                <label
+                    class="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-500 dark:hover:bg-slate-600 text-xs px-3 py-2 rounded font-medium border border-indigo-400 dark:border-slate-600 transition cursor-pointer flex items-center gap-1">
+                    <i class="fa-solid fa-upload"></i> Restore
+                    <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
+                </label>
+                <button onclick="resetAllData()"
+                    class="bg-red-600 hover:bg-red-500 text-xs px-3 py-2 rounded font-medium border border-red-400 transition flex items-center gap-1"
+                    title="Reset Semua Data">
+                    <i class="fa-solid fa-trash-can"></i> Reset
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigasi Tab -->
+    <nav class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto space-x-6 py-2 no-scrollbar">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard"
+                class="tab-btn font-semibold text-sm pb-2 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-house"></i> Dashboard
+            </button>
+            <button onclick="switchTab('karyawan')" id="btn-karyawan"
+                class="tab-btn text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-medium text-sm pb-2 border-b-2 border-transparent whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-users"></i> Data Karyawan
+            </button>
+            <button onclick="switchTab('input')" id="btn-input"
+                class="tab-btn text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-medium text-sm pb-2 border-b-2 border-transparent whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square"></i> Input Harian
+            </button>
+            <button onclick="switchTab('riwayat')" id="btn-riwayat"
+                class="tab-btn text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-medium text-sm pb-2 border-b-2 border-transparent whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left"></i> Riwayat Harian
+            </button>
+            <button onclick="switchTab('rekap')" id="btn-rekap"
+                class="tab-btn text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-medium text-sm pb-2 border-b-2 border-transparent whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice"></i> Rekap Bulanan
+            </button>
+        </div>
+    </nav>
+
+    <!-- Konten Utama -->
+    <main class="max-w-7xl mx-auto px-4 mt-6">
+
+        <!-- TAB: DASHBOARD -->
+        <section id="tab-dashboard" class="space-y-6">
+            <div
+                class="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Ringkasan Kinerja Tim</h2>
+                    <p class="text-indigo-100 text-sm mt-1">Pantau produktivitas dan papan peringkat performa karyawan.
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 text-sm">
+                    <span id="dashTotalKaryawan" class="font-bold text-lg">0</span> Karyawan Terdaftar
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Chart Rata-rata Skor -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 text-sm uppercase tracking-wider"><i
+                            class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i> Rata-rata Skor Kategori Tim Bulan
+                        Ini</h3>
+                    <div class="relative h-64">
+                        <canvas id="dashboardChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- LEADERBOARD TIM -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider"><i
+                                    class="fa-solid fa-trophy text-amber-500 mr-2"></i> Papan Peringkat (Leaderboard)
+                            </h3>
+                            <span class="text-xs text-slate-400">Bulan Ini</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="text-xs text-slate-400 border-b dark:border-slate-700">
+                                        <th class="py-2">Peringkat</th>
+                                        <th class="py-2">Nama Karyawan</th>
+                                        <th class="py-2 text-center">Keaktifan</th>
+                                        <th class="py-2 text-right">Skor Rata-rata</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboardBody">
+                                    <!-- Diisi via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div
+                        class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs text-slate-500">
+                        <span>Peringkat dihitung dari akumulasi rata-rata seluruh aspek KPI.</span>
+                        <button onclick="switchTab('input')"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded font-medium shadow transition">
+                            Input Harian <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: DATA KARYAWAN -->
+        <section id="tab-karyawan" class="hidden space-y-6">
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-indigo-600"></i> Tambah Karyawan Baru
+                </h2>
+                <form id="formKaryawan" onsubmit="tambahKaryawan(event)" class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="namaKaryawan" placeholder="Nama Lengkap Karyawan" required
+                        class="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="posisiKaryawan" placeholder="Posisi / Bagian (Opsional)"
+                        class="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="submit"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold shadow transition">
+                        Simpan Karyawan
+                    </button>
+                </form>
+            </div>
+
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-address-book text-indigo-600"></i> Daftar Karyawan
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr
+                                class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-b dark:border-slate-600">
+                                <th class="p-3">No</th>
+                                <th class="p-3">Nama Karyawan</th>
+                                <th class="p-3">Posisi / Bagian</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelKaryawanBody">
+                            <!-- Diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: INPUT HARIAN -->
+        <section id="tab-input" class="hidden space-y-6">
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-indigo-600"></i> Form Penilaian KPI Harian
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">Masukkan unit produksi (target 200 = nilai
+                    10). Jika ada kendala di catatan, nilai unit otomatis menjadi 9.</p>
+
+                <form id="formInputHarian" onsubmit="simpanInputHarian(event)" class="space-y-6">
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-indigo-50/50 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal
+                                Input</label>
+                            <input type="date" id="inputTanggal" required
+                                class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pilih
+                                Karyawan</label>
+                            <select id="inputKaryawanId" required
+                                class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                                <option value="">-- Pilih Karyawan --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Kategori 1: Kinerja & Produktivitas -->
+                    <div class="border border-purple-200 dark:border-purple-900 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-purple-700 text-white px-4 py-2 font-bold text-sm">
+                            1. Nilai Kinerja & Produktivitas
+                        </div>
+                        <div class="p-4 space-y-4 bg-purple-50/20 dark:bg-slate-700/20">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jumlah
+                                    unit yang diproduksi / hari (Target 200 = Nilai 10)</label>
+                                <input type="text" id="kpUnit" value="200" required oninput="hitungOtomatisUnit()"
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                                <p id="infoSkorUnit"
+                                    class="text-xs text-purple-600 dark:text-purple-400 mt-1 font-semibold">Skor Kinerja
+                                    & Produktivitas (Skala 1-10): 10</p>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jumlah
+                                    Produk Cacat</label>
+                                <input type="text" id="kpCacat" value="0" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kepatuhan
+                                    terhadap SOP (Skala 1 - 10)</label>
+                                <input type="text" id="kpSop" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kategori 2: Etos Kerja & Dedikasi -->
+                    <div class="border border-sky-200 dark:border-sky-900 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-sky-600 text-white px-4 py-2 font-bold text-sm">
+                            2. Nilai Etos Kerja & Dedikasi (Skala 1 - 10)
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-sky-50/20 dark:bg-slate-700/20">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggung
+                                    jawab dalam pekerjaan</label>
+                                <input type="text" id="ekTanggungJawab" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Inisiatif
+                                    dan Proaktif</label>
+                                <input type="text" id="ekInisiatif" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kedisiplinan
+                                    & Kepatuhan</label>
+                                <input type="text" id="ekKedisiplinan" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Semangat
+                                    dan Loyalitas</label>
+                                <input type="text" id="ekSemangat" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kategori 3: Inovasi dan Kreativitas -->
+                    <div class="border border-pink-200 dark:border-pink-900 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-pink-600 text-white px-4 py-2 font-bold text-sm">
+                            3. Inovasi dan Kreativitas (Skala 1 - 4)
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-pink-50/20 dark:bg-slate-700/20">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jumlah
+                                    ide atau solusi baru</label>
+                                <input type="text" id="invIde" value="2" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Dampak
+                                    dari inovasi</label>
+                                <input type="text" id="invDampak" value="2" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Penerapan
+                                    ide</label>
+                                <input type="text" id="invPenerapan" value="2" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kemampuan
+                                    berpikir kreatif</label>
+                                <input type="text" id="invKreatif" value="2" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kolaborasi
+                                    dalam inovasi</label>
+                                <input type="text" id="invKolaborasi" value="2" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kategori 4: Sikap dan Kolaborasi -->
+                    <div class="border border-emerald-200 dark:border-emerald-900 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-emerald-600 text-white px-4 py-2 font-bold text-sm">
+                            4. Sikap dan Kolaborasi (Skala 1 - 10)
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-emerald-50/20 dark:bg-slate-700/20">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Sikap
+                                    positif & Profesionalisme</label>
+                                <input type="text" id="skSikap" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Komunikasi
+                                    efektif</label>
+                                <input type="text" id="skKomunikasi" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kerja
+                                    sama tim</label>
+                                <input type="text" id="skTim" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Respon
+                                    terhadap feedback</label>
+                                <input type="text" id="skFeedback" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kepedulian
+                                    terhadap rekan kerja</label>
+                                <input type="text" id="skKepedulian" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kategori 5: Dampak Karyawan Terhadap Perusahaan -->
+                    <div class="border border-red-200 dark:border-red-900 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-red-600 text-white px-4 py-2 font-bold text-sm">
+                            5. Dampak Karyawan Terhadap Perusahaan (Skala 1 - 10)
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-red-50/20 dark:bg-slate-700/20">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kinerja
+                                    dan produktivitas</label>
+                                <input type="text" id="dmKinerja" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Efisiensi
+                                    dan Penghematan</label>
+                                <input type="text" id="dmEfisiensi" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Inovasi
+                                    & Perbaikan proses</label>
+                                <input type="text" id="dmInovasi" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Loyalitas
+                                    & Retensi</label>
+                                <input type="text" id="dmLoyalitas" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label
+                                    class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kolaborasi
+                                    & pengaruh dalam tim</label>
+                                <input type="text" id="dmPengaruh" value="8" required
+                                    class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Catatan Tambahan / Kendala -->
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-slate-700 text-white px-4 py-2 font-bold text-sm">
+                            Catatan / Kendala Harian
+                        </div>
+                        <div class="p-4 bg-slate-50 dark:bg-slate-700/20">
+                            <textarea id="catatanHarian" rows="3" oninput="hitungOtomatisUnit()"
+                                placeholder="Jika ada kendala (misal: mesin rusak, bahan terlambat, dll), tuliskan di sini. Nilai unit produksi otomatis menjadi 9..."
+                                class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3 rounded-xl shadow-md transition text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Simpan Input Harian
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB: RIWAYAT HARIAN -->
+        <section id="tab-riwayat" class="hidden space-y-6">
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Riwayat Penilaian Harian
+                    </h2>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <input type="month" id="filterBulanRiwayat" onchange="renderRiwayat()"
+                            class="border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr
+                                class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-b dark:border-slate-600">
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Nama Karyawan</th>
+                                <th class="p-3 text-center">Unit / Cacat</th>
+                                <th class="p-3 text-center">Prod. (Skor)</th>
+                                <th class="p-3 text-center">Etos Kerja</th>
+                                <th class="p-3 text-center">Inovasi</th>
+                                <th class="p-3 text-center">Sikap</th>
+                                <th class="p-3 text-center">Dampak</th>
+                                <th class="p-3">Catatan</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelRiwayatBody">
+                            <!-- Diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: REKAP BULANAN -->
+        <section id="tab-rekap" class="hidden space-y-6">
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice text-indigo-600"></i> Rekapitulasi & Pembulatan Bulanan
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Akumulasi rata-rata harian dengan
+                            pembulatan otomatis.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select id="filterKaryawanRekap" onchange="renderRekap()"
+                            class="border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            <option value="all">-- Semua Karyawan --</option>
+                        </select>
+                        <input type="month" id="filterBulanRekap" onchange="renderRekap()"
+                            class="border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        <button onclick="window.print()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded-lg font-semibold shadow transition flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> Cetak / PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Judul Cetak -->
+                <div class="hidden print:block mb-6 text-center">
+                    <h1 class="text-xl font-bold">LAPORAN REKAPITULASI KPI KARYAWAN</h1>
+                    <p id="printPeriodeText" class="text-sm text-slate-600 mt-1"></p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-indigo-900 text-white border-b">
+                                <th class="p-3">Karyawan</th>
+                                <th class="p-3 text-center">Total Hari Masuk</th>
+                                <th class="p-3 text-center">Total Unit / Cacat</th>
+                                <th class="p-3 text-center">Kinerja & Prod.</th>
+                                <th class="p-3 text-center">Etos Kerja</th>
+                                <th class="p-3 text-center">Inovasi</th>
+                                <th class="p-3 text-center">Sikap & Kolaborasi</th>
+                                <th class="p-3 text-center">Dampak Perusahaan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelRekapBody">
+                            <!-- Diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Grafik Kinerja Per Karyawan Terpilih -->
+                <div id="containerGrafikDetail" class="mt-8 pt-6 border-t dark:border-slate-700">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 text-sm uppercase tracking-wider">
+                        <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i> Grafik Tren Kinerja Bulanan Karyawan
+                    </h3>
+                    <div class="relative h-64 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl">
+                        <canvas id="rekapDetailChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Script Aplikasi -->
+    <script>
+        let db = JSON.parse(localStorage.getItem('kpi_db_v5')) || {
+            karyawan: [],
+            riwayat: []
+        };
+
+        function simpanDB() {
+            localStorage.setItem('kpi_db_v5', JSON.stringify(db));
+        }
+
+        function parseVal(val) {
+            if (!val) return 0;
+            const cleaned = String(val).replace(',', '.');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function clamp(val, min, max) {
+            return Math.min(Math.max(parseVal(val), min), max);
+        }
+
+        function hitungOtomatisUnit() {
+            const unit = parseVal(document.getElementById('kpUnit').value);
+            const catatan = document.getElementById('catatanHarian').value.trim();
+            const infoSkor = document.getElementById('infoSkorUnit');
+
+            let skor = 10;
+            if (catatan !== '') {
+                skor = 9;
+                infoSkor.innerText = `Skor Kinerja & Produktivitas (Skala 1-10): 9 (Otomatis karena ada catatan kendala)`;
+                infoSkor.className = "text-xs text-amber-600 dark:text-amber-400 mt-1 font-semibold";
+            } else {
+                skor = Math.min(10, Math.max(1, Math.round((unit / 200) * 10 * 10) / 10));
+                infoSkor.innerText = `Skor Kinerja & Produktivitas (Skala 1-10): ${skor} (Dihitung dari ${unit} unit)`;
+                infoSkor.className = "text-xs text-purple-600 dark:text-purple-400 mt-1 font-semibold";
+            }
+            return skor;
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('kpi_theme', 'light');
+                icon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('kpi_theme', 'dark');
+                icon.className = 'fa-solid fa-sun';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('kpi_theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun';
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            const currentYearMonth = today.slice(0, 7);
+
+            document.getElementById('inputTanggal').value = today;
+            document.getElementById('filterBulanRiwayat').value = currentYearMonth;
+            document.getElementById('filterBulanRekap').value = currentYearMonth;
+
+            refreshAll();
+            hitungOtomatisUnit();
+        });
+
+        function refreshAll() {
+            renderKaryawan();
+            populateSelectKaryawan();
+            renderRiwayat();
+            renderRekap();
+            renderDashboard();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
+                btn.classList.add('border-transparent', 'text-slate-600', 'dark:text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            activeBtn.classList.remove('border-transparent', 'text-slate-600', 'dark:text-slate-400');
+            activeBtn.classList.add('border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
+
+            if (tabId === 'dashboard') {
+                renderDashboardChart();
+                renderLeaderboard();
+            } else if (tabId === 'rekap') {
+                renderRekapDetailChart();
+            }
+        }
+
+        function tambahKaryawan(e) {
+            e.preventDefault();
+            const nama = document.getElementById('namaKaryawan').value.trim();
+            const posisi = document.getElementById('posisiKaryawan').value.trim();
+            if (!nama) return;
+
+            db.karyawan.push({
+                id: 'K_' + Date.now(),
+                nama: nama,
+                posisi: posisi || '-'
+            });
+            simpanDB();
+            document.getElementById('formKaryawan').reset();
+            refreshAll();
+            alert('Karyawan berhasil ditambahkan!');
+        }
+
+        function hapusKaryawan(id) {
+            if (confirm('Hapus karyawan ini? Data riwayat terkait juga akan dibersihkan.')) {
+                db.karyawan = db.karyawan.filter(k => k.id !== id);
+                db.riwayat = db.riwayat.filter(r => r.karyawanId !== id);
+                simpanDB();
+                refreshAll();
+            }
+        }
+
+        function resetAllData() {
+            if (confirm('PERINGATAN: Semua data karyawan dan riwayat harian akan dihapus permanen! Lanjutkan?')) {
+                db = { karyawan: [], riwayat: [] };
+                simpanDB();
+                refreshAll();
+                alert('Semua data berhasil direset.');
+            }
+        }
+
+        function renderKaryawan() {
+            const tbody = document.getElementById('tabelKaryawanBody');
+            tbody.innerHTML = '';
+            if (db.karyawan.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada data karyawan.</td></tr>`;
+                return;
+            }
+            db.karyawan.forEach((k, index) => {
+                tbody.innerHTML += `
+                    <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td class="p-3">${index + 1}</td>
+                        <td class="p-3 font-medium text-slate-800 dark:text-slate-100">${k.nama}</td>
+                        <td class="p-3 text-slate-600 dark:text-slate-300">${k.posisi}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="hapusKaryawan('${k.id}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 dark:bg-red-900/30 rounded"><i class="fa-solid fa-trash"></i> Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('dashTotalKaryawan').innerText = db.karyawan.length;
+        }
+
+        function populateSelectKaryawan() {
+            const select = document.getElementById('inputKaryawanId');
+            select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+
+            const selectRekap = document.getElementById('filterKaryawanRekap');
+            const currentSelected = selectRekap.value;
+            selectRekap.innerHTML = '<option value="all">-- Semua Karyawan --</option>';
+
+            db.karyawan.forEach(k => {
+                select.innerHTML += `<option value="${k.id}">${k.nama} (${k.posisi})</option>`;
+                selectRekap.innerHTML += `<option value="${k.id}">${k.nama}</option>`;
+            });
+            selectRekap.value = currentSelected;
+        }
+
+        function simpanInputHarian(e) {
+            e.preventDefault();
+            const tanggal = document.getElementById('inputTanggal').value;
+            const karyawanId = document.getElementById('inputKaryawanId').value;
+            const catatan = document.getElementById('catatanHarian').value.trim();
+            const unit = parseVal(document.getElementById('kpUnit').value);
+
+            const existingIndex = db.riwayat.findIndex(r => r.tanggal === tanggal && r.karyawanId === karyawanId);
+            if (existingIndex !== -1) {
+                if (!confirm('Karyawan ini sudah memiliki catatan penilaian pada tanggal tersebut. Apakah Anda ingin memperbarui (menimpa) data yang sudah ada?')) {
+                    return;
+                }
+                db.riwayat.splice(existingIndex, 1);
+            }
+
+            let nilaiProduktivitas = (catatan !== '') ? 9 : Math.min(10, Math.max(1, Math.round((unit / 200) * 10 * 10) / 10));
+
+            const data = {
+                id: 'R_' + Date.now(),
+                tanggal: tanggal,
+                karyawanId: karyawanId,
+                catatan: catatan,
+                kp: {
+                    unit: unit,
+                    cacat: parseVal(document.getElementById('kpCacat').value),
+                    sop: clamp(document.getElementById('kpSop').value, 1, 10),
+                    skorProduktivitas: nilaiProduktivitas
+                },
+                ek: {
+                    tanggungJawab: clamp(document.getElementById('ekTanggungJawab').value, 1, 10),
+                    inisiatif: clamp(document.getElementById('ekInisiatif').value, 1, 10),
+                    kedisiplinan: clamp(document.getElementById('ekKedisiplinan').value, 1, 10),
+                    semangat: clamp(document.getElementById('ekSemangat').value, 1, 10)
+                },
+                inv: {
+                    ide: clamp(document.getElementById('invIde').value, 1, 4),
+                    dampak: clamp(document.getElementById('invDampak').value, 1, 4),
+                    penerapan: clamp(document.getElementById('invPenerapan').value, 1, 4),
+                    kreatif: clamp(document.getElementById('invKreatif').value, 1, 4),
+                    kolaborasi: clamp(document.getElementById('invKolaborasi').value, 1, 4)
+                },
+                sk: {
+                    sikap: clamp(document.getElementById('skSikap').value, 1, 10),
+                    komunikasi: clamp(document.getElementById('skKomunikasi').value, 1, 10),
+                    tim: clamp(document.getElementById('skTim').value, 1, 10),
+                    feedback: clamp(document.getElementById('skFeedback').value, 1, 10),
+                    kepedulian: clamp(document.getElementById('skKepedulian').value, 1, 10)
+                },
+                dm: {
+                    kinerja: clamp(document.getElementById('dmKinerja').value, 1, 10),
+                    efisiensi: clamp(document.getElementById('dmEfisiensi').value, 1, 10),
+                    inovasi: clamp(document.getElementById('dmInovasi').value, 1, 10),
+                    loyalitas: clamp(document.getElementById('dmLoyalitas').value, 1, 10),
+                    pengaruh: clamp(document.getElementById('dmPengaruh').value, 1, 10)
+                }
+            };
+
+            db.riwayat.push(data);
+            simpanDB();
+            alert('Input harian berhasil disimpan!');
+            document.getElementById('formInputHarian').reset();
+            document.getElementById('inputTanggal').value = new Date().toISOString().split('T')[0];
+            hitungOtomatisUnit();
+            refreshAll();
+        }
+
+        function hapusRiwayat(id) {
+            if (confirm('Hapus data riwayat harian ini?')) {
+                db.riwayat = db.riwayat.filter(r => r.id !== id);
+                simpanDB();
+                refreshAll();
+            }
+        }
+
+        function renderRiwayat() {
+            const bulanFilter = document.getElementById('filterBulanRiwayat').value;
+            const tbody = document.getElementById('tabelRiwayatBody');
+            tbody.innerHTML = '';
+
+            const filtered = db.riwayat.filter(r => r.tanggal.startsWith(bulanFilter));
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Belum ada riwayat penilaian pada bulan ini.</td></tr>`;
+                return;
+            }
+
+            filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            filtered.forEach(r => {
+                const karyawan = db.karyawan.find(k => k.id === r.karyawanId);
+                const namaKar = karyawan ? karyawan.nama : 'Karyawan Dihapus';
+                const skorProd = r.kp.skorProduktivitas !== undefined ? r.kp.skorProduktivitas : 10;
+
+                const avgEk = ((r.ek.tanggungJawab + r.ek.inisiatif + r.ek.kedisiplinan + r.ek.semangat) / 4).toFixed(1);
+                const avgInv = ((r.inv.ide + r.inv.dampak + r.inv.penerapan + r.inv.kreatif + r.inv.kolaborasi) / 5).toFixed(1);
+                const avgSk = ((r.sk.sikap + r.sk.komunikasi + r.sk.tim + r.sk.feedback + r.sk.kepedulian) / 5).toFixed(1);
+                const avgDm = ((r.dm.kinerja + r.dm.efisiensi + r.dm.inovasi + r.dm.loyalitas + r.dm.pengaruh) / 5).toFixed(1);
+
+                tbody.innerHTML += `
+                    <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td class="p-3 text-xs font-medium">${r.tanggal}</td>
+                        <td class="p-3 font-semibold text-slate-800 dark:text-slate-100">${namaKar}</td>
+                        <td class="p-3 text-center text-xs"><span class="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-bold">${r.kp.unit}</span> / <span class="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5 rounded font-bold">${r.kp.cacat}</span></td>
+                        <td class="p-3 text-center font-bold text-purple-700 dark:text-purple-400">${skorProd}</td>
+                        <td class="p-3 text-center font-medium">${avgEk}</td>
+                        <td class="p-3 text-center font-medium">${avgInv}</td>
+                        <td class="p-3 text-center font-medium">${avgSk}</td>
+                        <td class="p-3 text-center font-medium">${avgDm}</td>
+                        <td class="p-3 text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">${r.catatan || '-'}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="hapusRiwayat('${r.id}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 dark:bg-red-900/30 rounded"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderRekap() {
+            const bulanFilter = document.getElementById('filterBulanRekap').value;
+            const selectedKaryawanId = document.getElementById('filterKaryawanRekap').value;
+            const tbody = document.getElementById('tabelRekapBody');
+            tbody.innerHTML = '';
+
+            document.getElementById('printPeriodeText').innerText = `Periode Bulan: ${bulanFilter}`;
+
+            let listKaryawan = db.karyawan;
+            if (selectedKaryawanId !== 'all') {
+                listKaryawan = db.karyawan.filter(k => k.id === selectedKaryawanId);
+            }
+
+            const filtered = db.riwayat.filter(r => r.tanggal.startsWith(bulanFilter));
+            if (db.karyawan.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada data karyawan terdaftar.</td></tr>`;
+                return;
+            }
+
+            listKaryawan.forEach(k => {
+                const dataKaryawan = filtered.filter(r => r.karyawanId === k.id);
+                const totalHari = dataKaryawan.length;
+
+                if (totalHari === 0) {
+                    tbody.innerHTML += `
+                        <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td class="p-3 font-semibold text-slate-800 dark:text-slate-100">${k.nama} <span class="block text-xs font-normal text-slate-400">${k.posisi}</span></td>
+                            <td class="p-3 text-center text-slate-400">0</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                let sumUnit = 0, sumCacat = 0;
+                let sumProdSkor = 0;
+                let sumEk = 0, sumInv = 0, sumSk = 0, sumDm = 0;
+
+                dataKaryawan.forEach(r => {
+                    sumUnit += r.kp.unit;
+                    sumCacat += r.kp.cacat;
+                    sumProdSkor += r.kp.skorProduktivitas !== undefined ? r.kp.skorProduktivitas : 10;
+
+                    sumEk += (r.ek.tanggungJawab + r.ek.inisiatif + r.ek.kedisiplinan + r.ek.semangat) / 4;
+                    sumInv += (r.inv.ide + r.inv.dampak + r.inv.penerapan + r.inv.kreatif + r.inv.kolaborasi) / 5;
+                    sumSk += (r.sk.sikap + r.sk.komunikasi + r.sk.tim + r.sk.feedback + r.sk.kepedulian) / 5;
+                    sumDm += (r.dm.kinerja + r.dm.efisiensi + r.dm.inovasi + r.dm.loyalitas + r.dm.pengaruh) / 5;
+                });
+
+                const avgProdBulat = Math.round(sumProdSkor / totalHari);
+                const avgEkBulat = Math.round(sumEk / totalHari);
+                const avgInvBulat = Math.round(sumInv / totalHari);
+                const avgSkBulat = Math.round(sumSk / totalHari);
+                const avgDmBulat = Math.round(sumDm / totalHari);
+
+                tbody.innerHTML += `
+                    <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td class="p-3 font-semibold text-slate-800 dark:text-slate-100">${k.nama} <span class="block text-xs font-normal text-slate-400">${k.posisi}</span></td>
+                        <td class="p-3 text-center font-medium">${totalHari} hari</td>
+                        <td class="p-3 text-center text-xs"><span class="text-purple-700 dark:text-purple-300 font-bold">${sumUnit}</span> / <span class="text-red-600 dark:text-red-400 font-bold">${sumCacat}</span></td>
+                        <td class="p-3 text-center"><span class="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 px-2 py-1 rounded font-bold text-xs">${avgProdBulat} / 10</span></td>
+                        <td class="p-3 text-center"><span class="bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300 px-2 py-1 rounded font-bold text-xs">${avgEkBulat} / 10</span></td>
+                        <td class="p-3 text-center"><span class="bg-pink-100 dark:bg-pink-900/40 text-pink-800 dark:text-pink-300 px-2 py-1 rounded font-bold text-xs">${avgInvBulat} / 4</span></td>
+                        <td class="p-3 text-center"><span class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-2 py-1 rounded font-bold text-xs">${avgSkBulat} / 10</span></td>
+                        <td class="p-3 text-center"><span class="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 px-2 py-1 rounded font-bold text-xs">${avgDmBulat} / 10</span></td>
+                    </tr>
+                `;
+            });
+
+            renderRekapDetailChart();
+        }
+
+        let myChart = null;
+        let detailChart = null;
+
+        function renderDashboard() {
+            document.getElementById('dashTotalKaryawan').innerText = db.karyawan.length;
+            renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboardBody');
+            tbody.innerHTML = '';
+            const bulanFilter = document.getElementById('filterBulanRekap').value;
+            const filtered = db.riwayat.filter(r => r.tanggal.startsWith(bulanFilter));
+
+            if (db.karyawan.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">Belum ada data karyawan.</td></tr>`;
+                return;
+            }
+
+            // Hitung skor rata-rata total tiap karyawan bulan ini
+            let skorKaryawan = db.karyawan.map(k => {
+                const dataK = filtered.filter(r => r.karyawanId === k.id);
+                if (dataK.length === 0) return { karyawan: k, skorTotal: 0, hari: 0 };
+
+                let totalScoreSum = 0;
+                dataK.forEach(r => {
+                    const p = r.kp.skorProduktivitas !== undefined ? r.kp.skorProduktivitas : 10;
+                    const e = (r.ek.tanggungJawab + r.ek.inisiatif + r.ek.kedisiplinan + r.ek.semangat) / 4;
+                    const i = ((r.inv.ide + r.inv.dampak + r.inv.penerapan + r.inv.kreatif + r.inv.kolaborasi) / 5) * 2.5; // Normalisasi skala 4 ke 10
+                    const s = (r.sk.sikap + r.sk.komunikasi + r.sk.tim + r.sk.feedback + r.sk.kepedulian) / 5;
+                    const d = (r.dm.kinerja + r.dm.efisiensi + r.dm.inovasi + r.dm.loyalitas + r.dm.pengaruh) / 5;
+
+                    totalScoreSum += (p + e + i + s + d) / 5;
+                });
+
+                return {
+                    karyawan: k,
+                    skorTotal: Number((totalScoreSum / dataK.length).toFixed(1)),
+                    hari: dataK.length
+                };
+            });
+
+            // Urutkan dari skor tertinggi
+            skorKaryawan.sort((a, b) => b.skorTotal - a.skorTotal);
+
+            skorKaryawan.forEach((item, index) => {
+                let badgeColor = "text-slate-600 dark:text-slate-300";
+                if (index === 0) badgeColor = "text-amber-500 font-bold text-base";
+                else if (index === 1) badgeColor = "text-slate-400 font-bold";
+                else if (index === 2) badgeColor = "text-amber-700 font-bold";
+
+                tbody.innerHTML += `
+                    <tr class="border-b dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td class="py-2.5 px-2 ${badgeColor}">#${index + 1}</td>
+                        <td class="py-2.5 px-2 font-medium text-slate-800 dark:text-slate-100">${item.karyawan.nama} <span class="block text-[10px] text-slate-400 font-normal">${item.karyawan.posisi}</span></td>
+                        <td class="py-2.5 px-2 text-center text-xs text-slate-500">${item.hari} hari</td>
+                        <td class="py-2.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">${item.skorTotal} / 10</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderDashboardChart() {
+            const ctx = document.getElementById('dashboardChart').getContext('2d');
+            const bulanFilter = document.getElementById('filterBulanRekap').value;
+            const filtered = db.riwayat.filter(r => r.tanggal.startsWith(bulanFilter));
+
+            let tEk = 0, tInv = 0, tSk = 0, tDm = 0, count = filtered.length;
+            if (count > 0) {
+                filtered.forEach(r => {
+                    tEk += (r.ek.tanggungJawab + r.ek.inisiatif + r.ek.kedisiplinan + r.ek.semangat) / 4;
+                    tInv += (r.inv.ide + r.inv.dampak + r.inv.penerapan + r.inv.kreatif + r.inv.kolaborasi) / 5;
+                    tSk += (r.sk.sikap + r.sk.komunikasi + r.sk.tim + r.sk.feedback + r.sk.kepedulian) / 5;
+                    tDm += (r.dm.kinerja + r.dm.efisiensi + r.dm.inovasi + r.dm.loyalitas + r.dm.pengaruh) / 5;
+                });
+                tEk = (tEk / count).toFixed(1);
+                tInv = (tInv / count).toFixed(1);
+                tSk = (tSk / count).toFixed(1);
+                tDm = (tDm / count).toFixed(1);
+            }
+
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Etos Kerja', 'Inovasi', 'Sikap & Kolaborasi', 'Dampak Perusahaan'],
+                    datasets: [{
+                        label: 'Rata-rata Tim',
+                        data: [tEk, tInv * 2.5, tSk, tDm],
+                        backgroundColor: ['#0284c7', '#db2777', '#059669', '#dc2626'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 10 }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderRekapDetailChart() {
+            const ctx = document.getElementById('rekapDetailChart').getContext('2d');
+            const bulanFilter = document.getElementById('filterBulanRekap').value;
+            const selectedKaryawanId = document.getElementById('filterKaryawanRekap').value;
+
+            let labels = [];
+            let dataEtos = [];
+            let dataSikap = [];
+            let dataDampak = [];
+
+            if (selectedKaryawanId !== 'all') {
+                const historyKar = db.riwayat
+                    .filter(r => r.karyawanId === selectedKaryawanId && r.tanggal.startsWith(bulanFilter))
+                    .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+                labels = historyKar.map(h => h.tanggal.slice(-2));
+                dataEtos = historyKar.map(h => ((h.ek.tanggungJawab + h.ek.inisiatif + h.ek.kedisiplinan + h.ek.semangat) / 4).toFixed(1));
+                dataSikap = historyKar.map(h => ((h.sk.sikap + h.sk.komunikasi + h.sk.tim + h.sk.feedback + h.sk.kepedulian) / 5).toFixed(1));
+                dataDampak = historyKar.map(h => ((h.dm.kinerja + h.dm.efisiensi + h.dm.inovasi + h.dm.loyalitas + h.dm.pengaruh) / 5).toFixed(1));
+            } else {
+                const uniqueDates = [...new Set(db.riwayat.filter(r => r.tanggal.startsWith(bulanFilter)).map(r => r.tanggal))].sort();
+                labels = uniqueDates.map(d => d.slice(-2));
+
+                uniqueDates.forEach(d => {
+                    const dayData = db.riwayat.filter(r => r.tanggal === d);
+                    let sumE = 0, sumS = 0, sumD = 0;
+                    dayData.forEach(r => {
+                        sumE += (r.ek.tanggungJawab + r.ek.inisiatif + r.ek.kedisiplinan + r.ek.semangat) / 4;
+                        sumS += (r.sk.sikap + r.sk.komunikasi + r.sk.tim + r.sk.feedback + r.sk.kepedulian) / 5;
+                        sumD += (r.dm.kinerja + r.dm.efisiensi + r.dm.inovasi + r.dm.loyalitas + r.dm.pengaruh) / 5;
+                    });
+                    dataEtos.push((sumE / dayData.length).toFixed(1));
+                    dataSikap.push((sumS / dayData.length).toFixed(1));
+                    dataDampak.push((sumD / dayData.length).toFixed(1));
+                });
+            }
+
+            if (detailChart) detailChart.destroy();
+
+            detailChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Etos Kerja', data: dataEtos, borderColor: '#0284c7', backgroundColor: '#0284c7', tension: 0.2 },
+                        { label: 'Sikap & Kolaborasi', data: dataSikap, borderColor: '#059669', backgroundColor: '#059669', tension: 0.2 },
+                        { label: 'Dampak Perusahaan', data: dataDampak, borderColor: '#dc2626', backgroundColor: '#dc2626', tension: 0.2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 10 }
+                    }
+                }
+            });
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_kpi_karyawan_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const fileReader = new FileReader();
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = (e) => {
+                    try {
+                        db = JSON.parse(e.target.result);
+                        simpanDB();
+                        refreshAll();
+                        alert('Data berhasil dipulihkan (Restore)!');
+                    } catch (err) {
+                        alert('File cadangan tidak valid!');
+                    }
+                };
+            }
+        }
+    </script>
+</body>
+
+</html>
